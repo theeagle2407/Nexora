@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Brain, ChevronLeft, Check } from 'lucide-react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 
 type Question = {
   id: string;
@@ -28,7 +28,6 @@ const POSITIONS = [
 
 export default function RespondPage() {
   const params = useParams();
-  const router = useRouter();
   const code = params.code as string;
 
   const [session, setSession] = useState<Session | null>(null);
@@ -76,31 +75,20 @@ export default function RespondPage() {
     setSubmitting(true);
 
     try {
-      // Import Lit Protocol encryption
+      // Encrypt member identity with Lit Protocol (privacy-preserving identity)
       const { encryptResponse } = await import('@/lib/lit');
+      const encryptedIdentity = await encryptResponse(memberName.trim(), session.id);
 
-      const inserts = await Promise.all(
-        questions.map(async (q) => {
-          const responseData = JSON.stringify({
-            position: answers[q.id]?.position || '',
-            reasoning: answers[q.id]?.reasoning || '',
-          });
-
-          // Encrypt with Lit Protocol
-          const encrypted = await encryptResponse(responseData, session.id);
-
-          return {
-            question_id: q.id,
-            session_id: session.id,
-            member_name: memberName.trim(),
-            position: encrypted.fallback ? answers[q.id]?.position : 'ENCRYPTED',
-            reasoning: encrypted.fallback ? answers[q.id]?.reasoning : encrypted.ciphertext,
-            encrypted: !encrypted.fallback,
-            encryption_hash: encrypted.dataToEncryptHash || '',
-            access_conditions: encrypted.accessControlConditions || null,
-          };
-        })
-      );
+      const inserts = questions.map((q) => ({
+        question_id: q.id,
+        session_id: session.id,
+        member_name: memberName.trim(),
+        position: answers[q.id]?.position || '',
+        reasoning: answers[q.id]?.reasoning || '',
+        encrypted: !encryptedIdentity.fallback,
+        encryption_hash: encryptedIdentity.dataToEncryptHash || '',
+        access_conditions: encryptedIdentity.accessControlConditions || null,
+      }));
 
       const { error: err } = await supabase.from('responses').insert(inserts);
 
@@ -152,10 +140,10 @@ export default function RespondPage() {
           </div>
           <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', marginBottom: '16px' }}>Responses Submitted!</h1>
           <p style={{ color: '#64748b', marginBottom: '12px' }}>
-            Thank you <strong>{memberName}</strong>. Your responses have been encrypted with Lit Protocol and stored securely.
+            Thank you <strong>{memberName}</strong>. Your identity has been encrypted with Lit Protocol.
           </p>
           <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '32px' }}>
-            🔒 Privacy-preserving encryption active
+            🔒 Privacy-preserving identity protection active
           </p>
           <Link href="/" style={{ display: 'inline-block', padding: '14px 32px', backgroundColor: '#0f172a', color: 'white', borderRadius: '12px', fontWeight: '700', textDecoration: 'none' }}>
             Back to Home
@@ -182,7 +170,7 @@ export default function RespondPage() {
 
           <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '32px', boxShadow: '0 10px 25px rgba(0,0,0,0.08)' }}>
             <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>What is your name?</h2>
-            <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '20px' }}>This helps the admin identify responses.</p>
+            <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '20px' }}>Your identity will be encrypted with Lit Protocol.</p>
             <input
               type="text"
               value={memberName}
@@ -252,7 +240,7 @@ export default function RespondPage() {
           </div>
 
           <p style={{ fontSize: '14px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>
-            Your reasoning <span style={{ color: '#94a3b8', fontWeight: '400' }}>(will be encrypted)</span>
+            Your reasoning <span style={{ color: '#94a3b8', fontWeight: '400' }}>(required)</span>
           </p>
           <textarea
             value={currentAnswer.reasoning}
