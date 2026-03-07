@@ -1,22 +1,30 @@
-import * as LitJsSdk from '@lit-protocol/lit-node-client';
-
 let litNodeClient: any;
 
 export async function initLit() {
   if (litNodeClient) return litNodeClient;
-  
-  litNodeClient = new LitJsSdk.LitNodeClient({
-    litNetwork: 'datil-dev', // Updated network name
-  });
-  
-  await litNodeClient.connect();
-  return litNodeClient;
+
+  try {
+    const LitJsSdk = await import('@lit-protocol/lit-node-client');
+    const client = new LitJsSdk.LitNodeClient({
+      litNetwork: 'datil-dev',
+      debug: false,
+    });
+    await client.connect();
+    litNodeClient = client;
+    return litNodeClient;
+  } catch (error) {
+    console.error('Lit init error:', error);
+    return null;
+  }
 }
 
 export async function encryptResponse(data: string, sessionId: string) {
   try {
     const client = await initLit();
-    
+    if (!client) throw new Error('Lit client not initialized');
+
+    const { encryptString } = await import('@lit-protocol/lit-node-client');
+
     const accessControlConditions = [
       {
         contractAddress: '',
@@ -31,7 +39,7 @@ export async function encryptResponse(data: string, sessionId: string) {
       },
     ];
 
-    const { ciphertext, dataToEncryptHash } = await LitJsSdk.encryptString(
+    const { ciphertext, dataToEncryptHash } = await encryptString(
       {
         accessControlConditions,
         dataToEncrypt: data,
@@ -63,8 +71,11 @@ export async function decryptResponse(
 ) {
   try {
     const client = await initLit();
-    
-    const decryptedString = await LitJsSdk.decryptToString(
+    if (!client) throw new Error('Lit client not initialized');
+
+    const { decryptToString } = await import('@lit-protocol/lit-node-client');
+
+    const decryptedString = await decryptToString(
       {
         accessControlConditions,
         ciphertext,
