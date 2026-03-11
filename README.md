@@ -38,7 +38,7 @@ Nexora addresses cognitive augmentation and privacy-preserving identity by treat
 | Backend | Next.js API Routes |
 | Database | Supabase (PostgreSQL) |
 | Encryption | Lit Protocol (AES-GCM + access control) |
-| Storage | Filecoin/Storacha (immutable decision records) |
+| Storage | Filecoin (immutable decision records) |
 | Coordination | NEAR Protocol Testnet |
 | AI Synthesis | Groq (LLaMA 3.3 70B) |
 | Deployment | Vercel |
